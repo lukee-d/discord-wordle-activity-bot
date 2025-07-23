@@ -9,7 +9,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy bot application files
 COPY app.py .
-COPY wordle_data.json .
+
+# Create empty data file (bot will populate it)
+RUN echo '{"daily_results": {}, "guild_settings": {}}' > wordle_data.json
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
