@@ -1,8 +1,13 @@
 [build]
 builder = "nixpacks"
 
+[build.nixPacks]
+nixPacksConfigPath = "nixpacks.toml"
+
 [deploy]
 startCommand = "python3 app.py"
+restartPolicyType = "on_failure"
 
 [env]
 PYTHONPATH = "/app"
+NIXPACKS_PYTHON_VERSION = "3.11"
