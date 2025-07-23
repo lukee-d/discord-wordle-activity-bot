@@ -566,8 +566,17 @@ async def on_ready():
     # Sync commands with better error handling
     try:
         print("Attempting to sync slash commands...")
-        synced = await bot.tree.sync()
-        print(f"✅ Successfully synced {len(synced)} command(s)")
+        
+        if DEV_GUILD_ID:
+            # Development mode - sync to specific guild for instant updates
+            guild = discord.Object(id=DEV_GUILD_ID)
+            synced = await bot.tree.sync(guild=guild)
+            print(f"✅ Successfully synced {len(synced)} command(s) to development guild ({DEV_GUILD_ID})")
+        else:
+            # Production mode - sync globally (takes up to 2 hours)
+            synced = await bot.tree.sync()
+            print(f"✅ Successfully synced {len(synced)} command(s) globally")
+            print("⏱️  Note: Global commands may take up to 2 hours to appear in all servers")
         
         # List all synced commands
         for command in synced:
@@ -827,7 +836,7 @@ async def bot_info(interaction: discord.Interaction):
     # Guild info
     embed.add_field(
         name="Server Info",
-        value=f"📊 Guilds: {len(bot.guilds)}\n👥 Users: {len(bot.users)}",
+        value=f"📊 Guilds: {len(bot.guilds)}\n👥 Users: {len(bot.users)}\n🆔 This Server ID: `{interaction.guild_id}`",
         inline=True
     )
     
@@ -841,6 +850,12 @@ async def bot_info(interaction: discord.Interaction):
             f"Embed Links: {'✅' if permissions.embed_links else '❌'}\n"
             f"Read Message History: {'✅' if permissions.read_message_history else '❌'}"
         ),
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🚀 Development Tip",
+        value=f"For instant command updates, set `DEV_GUILD_ID = {interaction.guild_id}` in the code!",
         inline=False
     )
     
@@ -863,5 +878,8 @@ if not TOKEN:
     print("Error: DISCORD_BOT_TOKEN environment variable not set!")
     print("Please set it with: export DISCORD_BOT_TOKEN=your_token_here")
     exit(1)
+
+# Development guild ID - replace with your server's ID for instant command updates
+DEV_GUILD_ID = None  # Set this to your Discord server ID for instant sync during development
 
 bot.run(TOKEN)
