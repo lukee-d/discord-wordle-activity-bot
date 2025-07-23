@@ -68,7 +68,8 @@ const WORD_LIST = [
 
 // Game state
 const activePlayers = new Map();
-const dailyResults = new Map();
+const userStats = new Map(); // Store user statistics
+const dailyResults = new Map(); // Store daily game results
 
 // Middleware
 app.use(express.json());
@@ -107,6 +108,35 @@ app.get('/api/daily-results', (req, res) => {
     const today = getTodayString();
     const results = dailyResults.get(today) || [];
     res.json({ results, date: today });
+});
+
+// Stats sync API for Discord bot integration
+app.post('/api/sync-stats', (req, res) => {
+    const { userId, stats } = req.body;
+    if (!userId || !stats) {
+        return res.status(400).json({ error: 'Missing userId or stats' });
+    }
+    
+    // Store/update user stats (in production, use a database)
+    userStats.set(userId, {
+        ...stats,
+        lastUpdated: new Date().toISOString()
+    });
+    
+    res.json({ success: true, message: 'Stats synced successfully' });
+});
+
+app.get('/api/user-stats/:userId', (req, res) => {
+    const { userId } = req.params;
+    const stats = userStats.get(userId) || {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        currentStreak: 0,
+        maxStreak: 0,
+        guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+    };
+    
+    res.json({ stats, userId });
 });
 
 // WebSocket handling

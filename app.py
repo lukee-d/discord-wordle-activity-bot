@@ -5,6 +5,7 @@ import asyncio
 import datetime
 import json
 import os
+import aiohttp
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -13,6 +14,9 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+# Activity URL (set this after you deploy to Railway)
+ACTIVITY_URL = os.getenv('ACTIVITY_URL', 'https://your-app.railway.app')
 
 # Expanded list of 5-letter words (you can expand this much more)
 WORD_LIST = [
@@ -676,6 +680,91 @@ async def results_slash(interaction: discord.Interaction):
                    value=f"**Players:** {total_players}\n**Success Rate:** {success_rate}%", 
                    inline=False)
     
+    await interaction.response.send_message(embed=embed)
+
+# Commands to help users choose between bot and activity versions
+@bot.tree.command(name="wordle-help", description="Learn about both Wordle options: bot commands and interactive activity")
+async def wordle_help(interaction: discord.Interaction):
+    """Help users understand both the bot and activity options"""
+    embed = discord.Embed(
+        title="🎯 Discord Wordle - Two Ways to Play!",
+        description="Choose your preferred Wordle experience:",
+        color=0x00ff00
+    )
+    
+    embed.add_field(
+        name="🤖 Bot Commands (Classic)",
+        value=(
+            "• `/wordlebot` - Play Wordle with Discord slash commands\n"
+            "• Private gameplay, public results sharing\n"
+            "• Text-based interface\n"
+            "• Cross-platform stats\n"
+            "• Perfect for any channel"
+        ),
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🎮 Discord Activity (Interactive)",
+        value=(
+            "• Launch from voice channels (Activities button)\n"
+            "• Visual game board with clicking\n"
+            "• Real-time multiplayer viewing\n"
+            "• Modern web interface\n"
+            "• Best experienced in voice channels"
+        ),
+        inline=False
+    )
+    
+    embed.add_field(
+        name="📊 Shared Features",
+        value="Both versions track your daily streaks and statistics!",
+        inline=False
+    )
+    
+    embed.set_footer(text="Choose the experience that works best for you!")
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="launch-activity", description="Get instructions to launch the interactive Wordle activity")
+async def launch_activity(interaction: discord.Interaction):
+    """Help users launch the Discord Activity"""
+    embed = discord.Embed(
+        title="🚀 Launch Interactive Wordle Activity",
+        description="Here's how to access the visual Wordle game:",
+        color=0x5865f2
+    )
+    
+    embed.add_field(
+        name="Step 1: Join a Voice Channel",
+        value="Connect to any voice channel in this server",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Step 2: Find Activities",
+        value="Look for the 🚀 **Activities** button in the voice channel",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Step 3: Select Discord Wordle",
+        value="Click on **Discord Wordle** from the activities list",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Step 4: Play Together!",
+        value="Enjoy the interactive game with friends watching live",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🔗 Direct Link",
+        value=f"[Open Activity in Browser]({ACTIVITY_URL})",
+        inline=False
+    )
+    
+    embed.set_footer(text="Can't find the activity? Make sure it's properly configured in Discord Developer Portal")
     await interaction.response.send_message(embed=embed)
 
 # Keep the old commands for backwards compatibility
