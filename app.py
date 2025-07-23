@@ -858,19 +858,29 @@ async def guess(ctx, word: str = None):
     await ctx.send("Please use the `/wordlebot` slash command instead for a better experience!")
 
 # Get bot token from environment variable
-TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+TOKEN = os.getenv('DISCORD_BOT_TOKEN') or os.getenv('BOT_TOKEN') or os.getenv('DISCORD_TOKEN') or os.getenv('TOKEN')
 print(f"Environment check:")
-print(f"- Looking for DISCORD_BOT_TOKEN")
+print(f"- Looking for DISCORD_BOT_TOKEN, BOT_TOKEN, DISCORD_TOKEN, TOKEN")
 print(f"- Found token: {'Yes' if TOKEN else 'No'}")
 print(f"- Token length: {len(TOKEN) if TOKEN else 0}")
 print(f"- Token starts with: {TOKEN[:10] + '...' if TOKEN and len(TOKEN) > 10 else 'N/A'}")
 
 if not TOKEN:
-    print("Error: DISCORD_BOT_TOKEN environment variable not set!")
-    print("Please set it with: export DISCORD_BOT_TOKEN=your_token_here")
+    print("Error: Bot token environment variable not set!")
+    print("Please set one of these variables with your Discord bot token:")
+    print("  - DISCORD_BOT_TOKEN=your_token_here")
+    print("  - BOT_TOKEN=your_token_here") 
+    print("  - DISCORD_TOKEN=your_token_here")
+    print("  - TOKEN=your_token_here")
+    print()
     print("Available environment variables:")
-    for key in os.environ.keys():
-        if 'TOKEN' in key.upper() or 'DISCORD' in key.upper():
+    for key in sorted(os.environ.keys()):
+        if 'TOKEN' in key.upper() or 'DISCORD' in key.upper() or 'BOT' in key.upper():
+            print(f"  - {key}")
+    print()
+    print("All environment variables:")
+    for key in sorted(os.environ.keys()):
+        if not key.startswith('RAILWAY_'):
             print(f"  - {key}")
     exit(1)
 
