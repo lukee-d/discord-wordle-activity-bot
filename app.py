@@ -821,6 +821,27 @@ async def sync_guild(interaction: discord.Interaction):
         await interaction.response.send_message(f"❌ Failed to sync commands: {str(e)}", ephemeral=True)
         print(f"Guild sync failed: {e}")
 
+@bot.tree.command(name="serverid", description="Get this server's ID for development mode")
+async def server_id(interaction: discord.Interaction):
+    """Quick command to get server ID"""
+    embed = discord.Embed(title="🆔 Server Information", color=0x5865F2)
+    embed.add_field(
+        name="Server ID", 
+        value=f"`{interaction.guild_id}`", 
+        inline=False
+    )
+    embed.add_field(
+        name="📝 How to Enable Dev Mode",
+        value=(
+            f"1. Copy this server ID: `{interaction.guild_id}`\n"
+            f"2. Update code: `DEV_GUILD_ID = {interaction.guild_id}`\n" 
+            f"3. Redeploy bot\n"
+            f"4. All commands will sync instantly!"
+        ),
+        inline=False
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
 @bot.tree.command(name="bot-info", description="Show bot information and permissions")
 async def bot_info(interaction: discord.Interaction):
     """Show bot status and permissions"""
@@ -881,5 +902,8 @@ if not TOKEN:
 
 # Development guild ID - replace with your server's ID for instant command updates
 DEV_GUILD_ID = None  # Set this to your Discord server ID for instant sync during development
+
+# Quick way to get your server ID: Right-click your server name in Discord → "Copy Server ID"
+# (Make sure Developer Mode is enabled in Discord settings)
 
 bot.run(TOKEN)
