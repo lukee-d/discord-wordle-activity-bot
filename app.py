@@ -557,13 +557,27 @@ async def before_daily_summary():
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
+    print(f"Bot ID: {bot.user.id}")
+    print(f"Connected to {len(bot.guilds)} guilds")
+    
     load_data()  # Load saved data
     daily_summary.start()  # Start the daily summary task
+    
+    # Sync commands with better error handling
     try:
+        print("Attempting to sync slash commands...")
         synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} command(s)")
+        print(f"✅ Successfully synced {len(synced)} command(s)")
+        
+        # List all synced commands
+        for command in synced:
+            print(f"  - /{command.name}")
+            
     except Exception as e:
-        print(f"Failed to sync commands: {e}")
+        print(f"❌ Failed to sync commands: {e}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
 
 @bot.event
 async def on_disconnect():
@@ -766,6 +780,56 @@ async def launch_activity(interaction: discord.Interaction):
     
     embed.set_footer(text="Can't find the activity? Make sure it's properly configured in Discord Developer Portal")
     await interaction.response.send_message(embed=embed)
+
+# Admin command to force sync commands
+@bot.tree.command(name="sync-commands", description="Force sync slash commands (admin only)")
+async def sync_commands(interaction: discord.Interaction):
+    """Force sync slash commands - useful for testing"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Only administrators can use this command.", ephemeral=True)
+        return
+        
+    try:
+        synced = await bot.tree.sync()
+        await interaction.response.send_message(f"✅ Successfully synced {len(synced)} command(s)!", ephemeral=True)
+        print(f"Manual sync: {len(synced)} commands synced by {interaction.user}")
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Failed to sync commands: {str(e)}", ephemeral=True)
+        print(f"Manual sync failed: {e}")
+
+@bot.tree.command(name="bot-info", description="Show bot information and permissions")
+async def bot_info(interaction: discord.Interaction):
+    """Show bot status and permissions"""
+    embed = discord.Embed(title="🤖 Bot Information", color=0x00ff00)
+    
+    # Bot basic info
+    embed.add_field(
+        name="Bot Status", 
+        value=f"✅ Online\n🏓 Latency: {round(bot.latency * 1000)}ms", 
+        inline=True
+    )
+    
+    # Guild info
+    embed.add_field(
+        name="Server Info",
+        value=f"📊 Guilds: {len(bot.guilds)}\n👥 Users: {len(bot.users)}",
+        inline=True
+    )
+    
+    # Check permissions
+    permissions = interaction.app_permissions
+    embed.add_field(
+        name="Key Permissions",
+        value=(
+            f"Send Messages: {'✅' if permissions.send_messages else '❌'}\n"
+            f"Use Slash Commands: {'✅' if permissions.use_slash_commands else '❌'}\n"
+            f"Embed Links: {'✅' if permissions.embed_links else '❌'}\n"
+            f"Read Message History: {'✅' if permissions.read_message_history else '❌'}"
+        ),
+        inline=False
+    )
+    
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Keep the old commands for backwards compatibility
 @bot.command()
