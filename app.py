@@ -572,6 +572,12 @@ async def on_ready():
             guild = discord.Object(id=DEV_GUILD_ID)
             synced = await bot.tree.sync(guild=guild)
             print(f"✅ Successfully synced {len(synced)} command(s) to development guild ({DEV_GUILD_ID})")
+            
+            # If no commands synced to guild, try global sync as fallback
+            if len(synced) == 0:
+                print("⚠️  No commands synced to guild, trying global sync as fallback...")
+                synced = await bot.tree.sync()
+                print(f"✅ Global fallback: Successfully synced {len(synced)} command(s)")
         else:
             # Production mode - sync globally (takes up to 2 hours)
             synced = await bot.tree.sync()
@@ -579,8 +585,13 @@ async def on_ready():
             print("⏱️  Note: Global commands may take up to 2 hours to appear in all servers")
         
         # List all synced commands
-        for command in synced:
-            print(f"  - /{command.name}")
+        if len(synced) > 0:
+            print("Synced commands:")
+            for command in synced:
+                print(f"  - /{command.name}")
+        else:
+            print("⚠️  WARNING: No commands were synced! Check bot permissions.")
+            print("Make sure bot has 'applications.commands' scope and proper permissions.")
             
     except Exception as e:
         print(f"❌ Failed to sync commands: {e}")
