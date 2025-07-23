@@ -584,7 +584,7 @@ async def on_ready():
                 bot_member = guild_obj.get_member(bot.user.id)
                 if bot_member:
                     perms = bot_member.guild_permissions
-                    print(f"🔐 Bot permissions - Send Messages: {perms.send_messages}, Use Slash Commands: {perms.use_slash_commands}")
+                    print(f"🔐 Bot permissions - Send Messages: {perms.send_messages}, Use Application Commands: {perms.use_application_commands}")
                 
             # Sync to the specific guild
             guild = discord.Object(id=DEV_GUILD_ID)
@@ -899,7 +899,7 @@ async def debug_sync(interaction: discord.Interaction):
         name="Bot Permissions",
         value=(
             f"Send Messages: {'✅' if perms.send_messages else '❌'}\n"
-            f"Use Slash Commands: {'✅' if perms.use_slash_commands else '❌'}\n"
+            f"Use Application Commands: {'✅' if perms.use_application_commands else '❌'}\n"
             f"Embed Links: {'✅' if perms.embed_links else '❌'}"
         ),
         inline=False
@@ -1000,7 +1000,7 @@ async def bot_info(interaction: discord.Interaction):
         name="Key Permissions",
         value=(
             f"Send Messages: {'✅' if permissions.send_messages else '❌'}\n"
-            f"Use Slash Commands: {'✅' if permissions.use_slash_commands else '❌'}\n"
+            f"Use Application Commands: {'✅' if permissions.use_application_commands else '❌'}\n"
             f"Embed Links: {'✅' if permissions.embed_links else '❌'}\n"
             f"Read Message History: {'✅' if permissions.read_message_history else '❌'}"
         ),
