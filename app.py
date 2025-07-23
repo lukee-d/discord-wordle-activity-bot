@@ -859,9 +859,19 @@ async def guess(ctx, word: str = None):
 
 # Get bot token from environment variable
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+print(f"Environment check:")
+print(f"- Looking for DISCORD_BOT_TOKEN")
+print(f"- Found token: {'Yes' if TOKEN else 'No'}")
+print(f"- Token length: {len(TOKEN) if TOKEN else 0}")
+print(f"- Token starts with: {TOKEN[:10] + '...' if TOKEN and len(TOKEN) > 10 else 'N/A'}")
+
 if not TOKEN:
     print("Error: DISCORD_BOT_TOKEN environment variable not set!")
     print("Please set it with: export DISCORD_BOT_TOKEN=your_token_here")
+    print("Available environment variables:")
+    for key in os.environ.keys():
+        if 'TOKEN' in key.upper() or 'DISCORD' in key.upper():
+            print(f"  - {key}")
     exit(1)
 
 bot.run(TOKEN)
