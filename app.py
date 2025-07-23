@@ -797,6 +797,21 @@ async def sync_commands(interaction: discord.Interaction):
         await interaction.response.send_message(f"❌ Failed to sync commands: {str(e)}", ephemeral=True)
         print(f"Manual sync failed: {e}")
 
+@bot.tree.command(name="sync-guild", description="Force sync commands to this guild only (faster, admin only)")
+async def sync_guild(interaction: discord.Interaction):
+    """Force sync slash commands to current guild only - for faster testing"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Only administrators can use this command.", ephemeral=True)
+        return
+        
+    try:
+        synced = await bot.tree.sync(guild=interaction.guild)
+        await interaction.response.send_message(f"✅ Successfully synced {len(synced)} command(s) to this guild!", ephemeral=True)
+        print(f"Guild sync: {len(synced)} commands synced to {interaction.guild.name} by {interaction.user}")
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Failed to sync commands: {str(e)}", ephemeral=True)
+        print(f"Guild sync failed: {e}")
+
 @bot.tree.command(name="bot-info", description="Show bot information and permissions")
 async def bot_info(interaction: discord.Interaction):
     """Show bot status and permissions"""
