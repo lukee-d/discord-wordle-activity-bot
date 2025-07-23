@@ -901,7 +901,7 @@ if not TOKEN:
     exit(1)
 
 # Development guild ID - replace with your server's ID for instant command updates
-DEV_GUILD_ID = None  # Set this to your Discord server ID for instant sync during development
+DEV_GUILD_ID = 1397577059861266564  # Set this to your Discord server ID for instant sync during development
 
 # Quick way to get your server ID: Right-click your server name in Discord → "Copy Server ID"
 # (Make sure Developer Mode is enabled in Discord settings)
