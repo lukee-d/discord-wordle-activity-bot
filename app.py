@@ -563,58 +563,99 @@ async def on_ready():
     load_data()  # Load saved data
     daily_summary.start()  # Start the daily summary task
     
-    # Sync commands with Entry Point command handling
+    # Debug: Print all commands that should be registered
+    print(f"📋 Commands to register: {len(bot.tree.get_commands())}")
+    for cmd in bot.tree.get_commands():
+        print(f"   - {cmd.name}: {cmd.description}")
+    
+    # Sync commands with better error handling and debugging
     try:
-        print("Attempting to sync slash commands...")
+        print("🔄 Attempting to sync slash commands...")
         
         if DEV_GUILD_ID:
-            # Development mode - sync to specific guild for instant updates
+            print(f"🎯 Development mode: syncing to guild {DEV_GUILD_ID}")
+            
+            # Get the guild object and verify it exists
+            guild_obj = bot.get_guild(DEV_GUILD_ID)
+            if guild_obj:
+                print(f"✅ Found guild: {guild_obj.name}")
+                
+                # Check bot permissions in the guild
+                bot_member = guild_obj.get_member(bot.user.id)
+                if bot_member:
+                    perms = bot_member.guild_permissions
+                    print(f"🔐 Bot permissions - Send Messages: {perms.send_messages}, Use Slash Commands: {perms.use_slash_commands}")
+                
+            # Sync to the specific guild
             guild = discord.Object(id=DEV_GUILD_ID)
             synced = await bot.tree.sync(guild=guild)
-            print(f"✅ Successfully synced {len(synced)} command(s) to development guild ({DEV_GUILD_ID})")
+            print(f"✅ Successfully synced {len(synced)} command(s) to development guild")
             
-            # List synced commands
+            # Debug: List what was actually synced
             if len(synced) > 0:
-                print("Synced commands:")
+                print("📝 Synced commands:")
                 for command in synced:
-                    print(f"  - /{command.name}")
+                    print(f"   ✓ /{command.name} - {command.description}")
             else:
-                print("⚠️  No commands synced to guild - this might be normal if Discord Activity Entry Point commands exist")
+                print("⚠️  WARNING: 0 commands synced!")
+                print("🔍 Possible issues:")
+                print("   - Bot missing 'applications.commands' scope")
+                print("   - Bot doesn't have proper permissions in guild")
+                print("   - Commands not properly registered to tree")
+                
+                # Try to get existing commands
+                try:
+                    existing = await bot.tree.fetch_commands(guild=guild)
+                    print(f"📊 Existing commands in guild: {len(existing)}")
+                    for cmd in existing:
+                        print(f"   - {cmd.name}")
+                except Exception as fetch_error:
+                    print(f"❌ Could not fetch existing commands: {fetch_error}")
         else:
-            # Production mode - sync globally but handle Entry Point command error
-            try:
-                synced = await bot.tree.sync()
-                print(f"✅ Successfully synced {len(synced)} command(s) globally")
-                print("⏱️  Note: Global commands may take up to 2 hours to appear in all servers")
-            except discord.HTTPException as e:
-                if "Entry Point command" in str(e):
-                    print("⚠️  Entry Point command conflict detected (Discord Activity)")
-                    print("📝 This is expected if you have a Discord Activity configured")
-                    print("🎯 Guild-specific commands should still work fine!")
-                    # Don't treat this as a fatal error
-                else:
-                    raise e
-        
-        # List all synced commands
-        if 'synced' in locals() and len(synced) > 0:
-            print("Synced commands:")
-            for command in synced:
-                print(f"  - /{command.name}")
+            print("🌍 Production mode: syncing globally")
+            synced = await bot.tree.sync()
+            print(f"✅ Successfully synced {len(synced)} command(s) globally")
         
         print("🤖 Bot is ready to receive commands!")
             
+    except discord.HTTPException as http_error:
+        print(f"❌ HTTP Error during sync: {http_error}")
+        print(f"Status: {http_error.status}")
+        print(f"Code: {getattr(http_error, 'code', 'Unknown')}")
+        if "applications.commands" in str(http_error).lower():
+            print("💡 SOLUTION: Re-invite bot with 'applications.commands' scope!")
+            print(f"🔗 Use this URL: https://discord.com/api/oauth2/authorize?client_id={bot.user.id}&permissions=2048&scope=bot%20applications.commands")
     except Exception as e:
-        print(f"❌ Failed to sync commands: {e}")
+        print(f"❌ Unexpected error during sync: {e}")
         print(f"Error type: {type(e).__name__}")
-        
-        # For Entry Point command errors, provide helpful context
-        if "Entry Point command" in str(e):
-            print("💡 This error is related to Discord Activity Entry Point commands")
-            print("🔧 Solution: Commands should work fine in guild-specific mode")
-            print("🎯 Your slash commands are likely working despite this error!")
-        
         import traceback
         traceback.print_exc()
+
+# Add comprehensive error handlers
+@bot.event
+async def on_command_error(ctx, error):
+    """Handle legacy command errors"""
+    print(f'Legacy command error: {str(error)}')
+
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+    """Enhanced slash command error handler"""
+    print(f"❌ Slash command error: {error}")
+    print(f"Command: {interaction.command.name if interaction.command else 'Unknown'}")
+    print(f"User: {interaction.user}")
+    print(f"Guild: {interaction.guild}")
+    
+    # Log more details for debugging
+    import traceback
+    traceback.print_exc()
+    
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send("An error occurred while processing your command.", ephemeral=True)
+        else:
+            await interaction.response.send_message("An error occurred while processing your command.", ephemeral=True)
+    except Exception as response_error:
+        print(f"Failed to send error message to user: {response_error}")
 
 @bot.event
 async def on_disconnect():
@@ -623,20 +664,6 @@ async def on_disconnect():
 @bot.event
 async def on_resumed():
     print("Bot connection resumed!")
-
-# Error handler for slash command errors
-@bot.tree.error
-async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
-    print(f"Command error: {error}")
-    
-    try:
-        if interaction.response.is_done():
-            await interaction.followup.send("An error occurred while processing your command.", ephemeral=True)
-        else:
-            await interaction.response.send_message("An error occurred while processing your command.", ephemeral=True)
-    except:
-        # If we can't send an error message, just log it
-        print("Failed to send error message to user")
 
 @bot.tree.command(name="wordlebot", description="Start today's Wordle game!")
 async def wordle_slash(interaction: discord.Interaction):
@@ -848,6 +875,84 @@ async def sync_guild(interaction: discord.Interaction):
     except Exception as e:
         await interaction.response.send_message(f"❌ Failed to sync commands: {str(e)}", ephemeral=True)
         print(f"Guild sync failed: {e}")
+
+@bot.tree.command(name="debug-sync", description="Debug command sync issues (admin only)")
+async def debug_sync(interaction: discord.Interaction):
+    """Debug command sync issues"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Only administrators can use this command.", ephemeral=True)
+        return
+    
+    embed = discord.Embed(title="🔍 Command Sync Debug Info", color=0x5865F2)
+    
+    # Check command tree
+    commands_in_tree = bot.tree.get_commands()
+    embed.add_field(
+        name="Commands in Tree",
+        value=f"Count: {len(commands_in_tree)}\n" + "\n".join([f"• {cmd.name}" for cmd in commands_in_tree[:10]]),
+        inline=False
+    )
+    
+    # Check bot permissions
+    perms = interaction.app_permissions
+    embed.add_field(
+        name="Bot Permissions",
+        value=(
+            f"Send Messages: {'✅' if perms.send_messages else '❌'}\n"
+            f"Use Slash Commands: {'✅' if perms.use_slash_commands else '❌'}\n"
+            f"Embed Links: {'✅' if perms.embed_links else '❌'}"
+        ),
+        inline=False
+    )
+    
+    # Guild info
+    embed.add_field(
+        name="Guild Info",
+        value=f"ID: {interaction.guild_id}\nDev Guild ID: {DEV_GUILD_ID}\nMatch: {'✅' if interaction.guild_id == DEV_GUILD_ID else '❌'}",
+        inline=False
+    )
+    
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.tree.command(name="force-sync", description="Force sync commands with detailed logging (admin only)")
+async def force_sync(interaction: discord.Interaction):
+    """Force sync with detailed debugging"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Only administrators can use this command.", ephemeral=True)
+        return
+    
+    await interaction.response.defer(ephemeral=True)
+    
+    try:
+        # Get commands before sync
+        commands_before = bot.tree.get_commands()
+        
+        # Try guild sync
+        guild = discord.Object(id=interaction.guild_id)
+        synced = await bot.tree.sync(guild=guild)
+        
+        # Build result message
+        result = f"✅ Synced {len(synced)} commands to this guild\n\n"
+        result += f"Commands in tree: {len(commands_before)}\n"
+        result += f"Commands synced: {len(synced)}\n\n"
+        
+        if synced:
+            result += "Synced commands:\n"
+            for cmd in synced:
+                result += f"• {cmd.name}\n"
+        else:
+            result += "⚠️ No commands synced - possible issues:\n"
+            result += "• Missing applications.commands scope\n"
+            result += "• Bot permission issues\n"
+            result += "• Discord API limitations\n"
+        
+        await interaction.followup.send(f"```{result}```", ephemeral=True)
+        print(f"Force sync by {interaction.user}: {len(synced)} commands synced")
+        
+    except Exception as e:
+        error_msg = f"❌ Sync failed: {str(e)}"
+        await interaction.followup.send(error_msg, ephemeral=True)
+        print(f"Force sync failed: {e}")
 
 @bot.tree.command(name="serverid", description="Get this server's ID for development mode")
 async def server_id(interaction: discord.Interaction):
