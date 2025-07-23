@@ -1,15 +1,21 @@
-# Bot deployment only - no web interface
+# Discord Bot - Python only
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy requirements and install
+# Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy bot files
+# Copy bot application files
 COPY app.py .
 COPY wordle_data.json .
 
-# Run the bot
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Expose port (though bot doesn't need it, Railway might expect it)
+EXPOSE 8080
+
+# Run the Discord bot
 CMD ["python3", "app.py"]
