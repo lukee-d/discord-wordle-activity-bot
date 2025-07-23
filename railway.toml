@@ -1,13 +1,8 @@
 [build]
-builder = "nixpacks"
-
-[build.nixPacks]
-nixPacksConfigPath = "nixpacks.toml"
+builder = "dockerfile"
 
 [deploy]
 startCommand = "python3 app.py"
+healthcheckPath = "/"
+healthcheckTimeout = 100
 restartPolicyType = "on_failure"
-
-[env]
-PYTHONPATH = "/app"
-NIXPACKS_PYTHON_VERSION = "3.11"
