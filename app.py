@@ -588,6 +588,11 @@ async def on_ready():
                 
             # Sync to the specific guild
             guild = discord.Object(id=DEV_GUILD_ID)
+            
+            # Try clearing and re-syncing commands
+            print("🧹 Clearing existing commands first...")
+            bot.tree.clear_commands(guild=guild)
+            
             synced = await bot.tree.sync(guild=guild)
             print(f"✅ Successfully synced {len(synced)} command(s) to development guild")
             
@@ -602,15 +607,31 @@ async def on_ready():
                 print("   - Bot missing 'applications.commands' scope")
                 print("   - Bot doesn't have proper permissions in guild")
                 print("   - Commands not properly registered to tree")
+                print("   - Discord API caching issues")
                 
-                # Try to get existing commands
+                # Check if commands exist in tree vs Discord
+                tree_commands = bot.tree.get_commands()
+                print(f"📊 Commands in local tree: {len(tree_commands)}")
+                for cmd in tree_commands:
+                    print(f"   📝 {cmd.name}")
+                
+                # Try to get existing commands from Discord
                 try:
                     existing = await bot.tree.fetch_commands(guild=guild)
-                    print(f"📊 Existing commands in guild: {len(existing)}")
+                    print(f"📊 Existing commands in Discord guild: {len(existing)}")
                     for cmd in existing:
-                        print(f"   - {cmd.name}")
+                        print(f"   🔄 {cmd.name}")
+                        
+                    if len(existing) > 0 and len(synced) == 0:
+                        print("🚨 ISSUE FOUND: Commands exist in Discord but sync returned 0")
+                        print("💡 This suggests a bot scope/permission issue")
+                        print("🔧 Try re-inviting bot with fresh permissions")
+                        
                 except Exception as fetch_error:
                     print(f"❌ Could not fetch existing commands: {fetch_error}")
+                    if "Missing Access" in str(fetch_error):
+                        print("🚨 ACCESS DENIED: Bot lacks permission to manage application commands")
+                        print("💡 SOLUTION: Re-invite bot with 'applications.commands' scope")
         else:
             print("🌍 Production mode: syncing globally")
             synced = await bot.tree.sync()
@@ -875,6 +896,93 @@ async def sync_guild(interaction: discord.Interaction):
     except Exception as e:
         await interaction.response.send_message(f"❌ Failed to sync commands: {str(e)}", ephemeral=True)
         print(f"Guild sync failed: {e}")
+
+@bot.tree.command(name="check-commands", description="Check what commands exist in Discord vs local tree (admin only)")
+async def check_commands(interaction: discord.Interaction):
+    """Check command discrepancies between local tree and Discord"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Only administrators can use this command.", ephemeral=True)
+        return
+    
+    await interaction.response.defer(ephemeral=True)
+    
+    # Get local commands
+    local_commands = bot.tree.get_commands()
+    
+    # Get Discord commands
+    try:
+        guild = discord.Object(id=interaction.guild_id)
+        discord_commands = await bot.tree.fetch_commands(guild=guild)
+        
+        result = f"🔍 Command Comparison\n\n"
+        result += f"Local Tree Commands: {len(local_commands)}\n"
+        for cmd in local_commands:
+            result += f"  📝 {cmd.name}\n"
+        
+        result += f"\nDiscord Guild Commands: {len(discord_commands)}\n"
+        for cmd in discord_commands:
+            result += f"  🔄 {cmd.name}\n"
+        
+        # Find mismatches
+        local_names = {cmd.name for cmd in local_commands}
+        discord_names = {cmd.name for cmd in discord_commands}
+        
+        missing_in_discord = local_names - discord_names
+        extra_in_discord = discord_names - local_names
+        
+        if missing_in_discord:
+            result += f"\n❌ Missing in Discord:\n"
+            for name in missing_in_discord:
+                result += f"  • {name}\n"
+        
+        if extra_in_discord:
+            result += f"\n⚠️ Extra in Discord:\n"
+            for name in extra_in_discord:
+                result += f"  • {name}\n"
+        
+        if not missing_in_discord and not extra_in_discord:
+            result += f"\n✅ Commands match perfectly!"
+        
+        await interaction.followup.send(f"```{result}```", ephemeral=True)
+        
+    except Exception as e:
+        error_msg = f"❌ Failed to fetch Discord commands: {str(e)}"
+        if "Missing Access" in str(e):
+            error_msg += "\n💡 Bot lacks 'applications.commands' scope - need to re-invite!"
+        await interaction.followup.send(error_msg, ephemeral=True)
+
+@bot.tree.command(name="clear-commands", description="Clear all guild commands and re-sync (admin only)")
+async def clear_commands(interaction: discord.Interaction):
+    """Clear and re-sync all commands"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Only administrators can use this command.", ephemeral=True)
+        return
+    
+    await interaction.response.defer(ephemeral=True)
+    
+    try:
+        guild = discord.Object(id=interaction.guild_id)
+        
+        # Clear commands
+        bot.tree.clear_commands(guild=guild)
+        await bot.tree.sync(guild=guild)
+        
+        # Re-add and sync
+        await asyncio.sleep(1)  # Brief pause
+        synced = await bot.tree.sync(guild=guild)
+        
+        result = f"✅ Cleared and re-synced commands\n\n"
+        result += f"Commands now active: {len(synced)}\n"
+        for cmd in synced:
+            result += f"• {cmd.name}\n"
+        
+        await interaction.followup.send(f"```{result}```", ephemeral=True)
+        print(f"Clear and re-sync by {interaction.user}: {len(synced)} commands")
+        
+    except Exception as e:
+        error_msg = f"❌ Clear/sync failed: {str(e)}"
+        await interaction.followup.send(error_msg, ephemeral=True)
+        print(f"Clear/sync failed: {e}")
 
 @bot.tree.command(name="debug-sync", description="Debug command sync issues (admin only)")
 async def debug_sync(interaction: discord.Interaction):
