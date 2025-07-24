@@ -605,7 +605,7 @@ async def on_disconnect():
 async def on_resumed():
     print("Bot connection resumed!")
 
-@bot.tree.command(name="wordlebot", description="Start today's Wordle game!")
+@bot.tree.command(name="wordlebot", description="🎯 Start today's Wordle game! (UPDATED)")
 async def wordle_slash(interaction: discord.Interaction):
     user_id = interaction.user.id
     guild_id = interaction.guild_id
@@ -657,7 +657,7 @@ async def wordle_slash(interaction: discord.Interaction):
     except:
         pass  # Channel might not allow sending messages
 
-@bot.tree.command(name="results", description="View today's Wordle results for this server")
+@bot.tree.command(name="results", description="📊 View today's Wordle results for this server (UPDATED)")
 async def results_slash(interaction: discord.Interaction):
     guild_id = str(interaction.guild_id)
     today = get_today_string()
