@@ -586,16 +586,13 @@ async def on_ready():
                     perms = bot_member.guild_permissions
                     print(f"🔐 Bot permissions - Send Messages: {perms.send_messages}, Use Application Commands: {perms.use_application_commands}")
                 
-            # First, clear and sync global commands to remove any old ones
-            print("🧹 Clearing old global commands...")
-            bot.tree.clear_commands(guild=None)  # Clear global commands
-            await bot.tree.sync()  # Sync globally to actually remove them from Discord
-            print("✅ Global commands cleared")
+            # Skip global clearing due to Entry Point command restrictions
+            # Discord Activities have Entry Point commands that can't be bulk-cleared
+            print("ℹ️  Skipping global clear (Entry Point command detected)")
             
-            # Now sync to the specific guild for development
+            # Sync directly to the specific guild for development
             guild = discord.Object(id=DEV_GUILD_ID)
             synced = await bot.tree.sync(guild=guild)
-            print(f"✅ Successfully synced {len(synced)} command(s) to development guild")
             print(f"✅ Successfully synced {len(synced)} command(s) to development guild")
             
             # Debug: List what was actually synced
