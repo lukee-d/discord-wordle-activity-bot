@@ -1022,6 +1022,95 @@ async def debug_sync(interaction: discord.Interaction):
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
+@bot.tree.command(name="force-global-sync", description="Force sync commands globally (takes 1-2 hours, admin only)")
+async def force_global_sync(interaction: discord.Interaction):
+    """Force sync globally as fallback"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Only administrators can use this command.", ephemeral=True)
+        return
+    
+    await interaction.response.defer(ephemeral=True)
+    
+    try:
+        # Get commands before sync
+        commands_before = bot.tree.get_commands()
+        
+        # Try global sync (bypasses guild-specific issues)
+        synced = await bot.tree.sync()
+        
+        # Build result message
+        result = f"✅ Global sync initiated: {len(synced)} commands\n\n"
+        result += f"Commands in tree: {len(commands_before)}\n"
+        result += f"Commands synced globally: {len(synced)}\n\n"
+        result += "⏰ Global commands take 1-2 hours to appear\n"
+        result += "But this bypasses guild permission issues\n\n"
+        
+        if synced:
+            result += "Synced commands:\n"
+            for cmd in synced:
+                result += f"• {cmd.name}\n"
+        else:
+            result += "⚠️ Still 0 commands synced\n"
+            result += "This confirms a fundamental permission issue\n"
+        
+        await interaction.followup.send(f"```{result}```", ephemeral=True)
+        print(f"Global sync by {interaction.user}: {len(synced)} commands synced globally")
+        
+    except Exception as e:
+        error_msg = f"❌ Global sync failed: {str(e)}"
+        await interaction.followup.send(error_msg, ephemeral=True)
+        print(f"Global sync failed: {e}")
+
+@bot.tree.command(name="test-permissions", description="Test bot's actual permissions in Discord API (admin only)")
+async def test_permissions(interaction: discord.Interaction):
+    """Test what the bot can actually do with Discord API"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Only administrators can use this command.", ephemeral=True)
+        return
+    
+    await interaction.response.defer(ephemeral=True)
+    
+    result = "🔍 Permission Test Results\n\n"
+    
+    # Test 1: Can we fetch guild commands?
+    try:
+        guild = discord.Object(id=interaction.guild_id)
+        existing = await bot.tree.fetch_commands(guild=guild)
+        result += f"✅ Can fetch guild commands: {len(existing)} found\n"
+    except Exception as e:
+        result += f"❌ Cannot fetch guild commands: {str(e)}\n"
+    
+    # Test 2: Can we fetch global commands?
+    try:
+        global_commands = await bot.tree.fetch_commands()
+        result += f"✅ Can fetch global commands: {len(global_commands)} found\n"
+    except Exception as e:
+        result += f"❌ Cannot fetch global commands: {str(e)}\n"
+    
+    # Test 3: Bot's actual guild permissions
+    try:
+        guild_obj = bot.get_guild(interaction.guild_id)
+        bot_member = guild_obj.get_member(bot.user.id)
+        perms = bot_member.guild_permissions
+        result += f"✅ Guild permissions:\n"
+        result += f"   - Administrator: {perms.administrator}\n"
+        result += f"   - Manage Guild: {perms.manage_guild}\n"
+        result += f"   - Use Application Commands: {perms.use_application_commands}\n"
+    except Exception as e:
+        result += f"❌ Cannot check guild permissions: {str(e)}\n"
+    
+    # Test 4: Bot's OAuth2 scopes (from interaction)
+    try:
+        app_perms = interaction.app_permissions
+        result += f"✅ App permissions in this context:\n"
+        result += f"   - Send Messages: {app_perms.send_messages}\n"
+        result += f"   - Use Application Commands: {app_perms.use_application_commands}\n"
+        result += f"   - Manage Messages: {app_perms.manage_messages}\n"
+    except Exception as e:
+        result += f"❌ Cannot check app permissions: {str(e)}\n"
+    
+    await interaction.followup.send(f"```{result}```", ephemeral=True)
+
 @bot.tree.command(name="force-sync", description="Force sync commands with detailed logging (admin only)")
 async def force_sync(interaction: discord.Interaction):
     """Force sync with detailed debugging"""
