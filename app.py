@@ -589,10 +589,7 @@ async def on_ready():
             # Sync to the specific guild
             guild = discord.Object(id=DEV_GUILD_ID)
             
-            # Try clearing and re-syncing commands
-            print("🧹 Clearing existing commands first...")
-            bot.tree.clear_commands(guild=guild)
-            
+            # Sync commands directly (no clearing needed for development)
             synced = await bot.tree.sync(guild=guild)
             print(f"✅ Successfully synced {len(synced)} command(s) to development guild")
             
@@ -963,15 +960,10 @@ async def clear_commands(interaction: discord.Interaction):
     try:
         guild = discord.Object(id=interaction.guild_id)
         
-        # Clear commands
-        bot.tree.clear_commands(guild=guild)
-        await bot.tree.sync(guild=guild)
-        
-        # Re-add and sync
-        await asyncio.sleep(1)  # Brief pause
+        # Just sync directly - clearing can cause issues with global commands
         synced = await bot.tree.sync(guild=guild)
         
-        result = f"✅ Cleared and re-synced commands\n\n"
+        result = f"✅ Synced commands to guild\n\n"
         result += f"Commands now active: {len(synced)}\n"
         for cmd in synced:
             result += f"• {cmd.name}\n"
